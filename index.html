@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cenita Chill | Cita Especial</title>
+
+    <!-- Google Fonts: Inter & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Three.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <!-- Canvas Confetti CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        obsidian: '#0f0a14',
+                        charcoal: '#1a1025',
+                        pink: {
+                            400: '#f472b6',
+                            500: '#ec4899',
+                            600: '#db2777',
+                        },
+                        blue: {
+                            400: '#60a5fa',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                        },
+                        purple: {
+                            400: '#c084fc',
+                            500: '#a855f7',
+                            600: '#9333ea',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        * {
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: #0f0a14;
+            color: #f3f4f6;
+            overflow-x: hidden;
+        }
+
+        /* Background 3D Canvas */
+        #bg-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* Subtle grid overlay */
+        .cyber-grid {
+            background-size: 32px 32px;
+            background-image:
+                linear-gradient(to right, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+        }
+
+        /* Glassmorphism cards */
+        .glass-panel {
+            background: rgba(26, 16, 37, 0.78);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 25px rgba(236, 72, 153, 0.04);
+        }
+
+        /* Option card selection states */
+        .option-card {
+            transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .option-card:hover {
+            border-color: rgba(236, 72, 153, 0.4);
+            background: rgba(236, 72, 153, 0.04);
+            transform: translateY(-2px);
+        }
+
+        .option-card.selected {
+            border-color: #ec4899;
+            background: linear-gradient(135deg, rgba(236, 72, 153, 0.14) 0%, rgba(59, 130, 246, 0.08) 100%);
+            box-shadow: 0 0 25px rgba(236, 72, 153, 0.18), inset 0 0 12px rgba(236, 72, 153, 0.08);
+        }
+
+        /* Tag pill states */
+        .qa-pill {
+            transition: all 0.18s ease;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .qa-pill.active {
+            border-color: #a855f7;
+            background: rgba(168, 85, 247, 0.18);
+            color: #e9d5ff;
+            box-shadow: 0 0 14px rgba(168, 85, 247, 0.25);
+        }
+
+        .step-view {
+            animation: stepFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes stepFadeIn {
+            from { opacity: 0; transform: translateY(12px) scale(0.99); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+    </style>
+</head>
+
+<body class="min-h-screen cyber-grid font-sans antialiased selection:bg-pink-500/30 selection:text-pink-300 flex flex-col justify-between relative">
+
+    <!-- 3D Background Canvas -->
+    <canvas id="bg-canvas"></canvas>
+
+    <!-- Ambient Glow Orbs -->
+    <div class="fixed top-[-10%] left-[-10%] w-72 h-72 rounded-full bg-pink-500/10 blur-[110px] pointer-events-none z-0"></div>
+    <div class="fixed bottom-[-10%] right-[-10%] w-80 h-80 rounded-full bg-blue-500/10 blur-[120px] pointer-events-none z-0"></div>
+
+    <!-- Top Navigation -->
+    <header class="relative z-10 w-full max-w-xl mx-auto px-4 pt-4 sm:pt-6">
+        <div class="glass-panel rounded-2xl p-3.5 sm:px-5 flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2.5">
+                <span class="relative flex h-2.5 w-2.5">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-pink-500"></span>
+                </span>
+                <span class="text-xs sm:text-sm font-medium tracking-tight text-gray-200">Menú Interactivo</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span id="step-counter-label" class="text-[11px] px-2.5 py-1 rounded-full bg-pink-500/10 text-pink-400 border border-pink-500/20 uppercase tracking-wider font-semibold">
+                    Inicio
+                </span>
+            </div>
+        </div>
+
+        <!-- Animated Progress Bar -->
+        <div class="mt-3 px-1">
+            <div class="w-full h-1.5 bg-white/5 rounded-full overflow-hidden p-[1px] border border-white/5">
+                <div id="progress-bar"
+                    class="h-full bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 rounded-full transition-all duration-500 ease-out"
+                    style="width: 10%"></div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Interactive Wizard Container -->
+    <main class="relative z-10 flex-1 flex items-center justify-center w-full max-w-xl mx-auto px-4 py-6">
+        <div class="glass-panel w-full rounded-3xl p-5 sm:p-8 relative overflow-hidden">
+            <!-- Top Subtle Accent Line -->
+            <div class="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-pink-500/50 to-blue-500/50"></div>
+
+            <!-- STEP 0: HERO / INTRO -->
+            <section id="step-0" class="step-view space-y-6">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/25 text-purple-400 text-xs">
+                    <span>Invitación a tarde de nerds jaja</span>
+                </div>
+
+                <div class="space-y-3">
+                    <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-white leading-tight">
+                        Cenita: <span class="text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-blue-400">Chismecito & Plan Chill</span>
+                    </h1>
+                    <p class="text-sm sm:text-base text-gray-300 leading-relaxed">
+                        Buenas mi estimada <strong class="text-white font-medium">Anna Urquijo</strong>, te prepare esto para saber que le apetece para este viernes.
+                    </p>
+                </div>
+
+                <div class="pt-2">
+                    <button onclick="goToStep(1)"
+                        class="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-400 hover:to-pink-500 active:scale-[0.99] text-white font-semibold text-sm sm:text-base shadow-lg shadow-pink-500/20 transition flex items-center justify-center gap-2 group">
+                        <span>Ver las opciones</span>
+                        <span class="transition-transform group-hover:translate-x-1">-&gt;</span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- STEP 1: COMIDA -->
+            <section id="step-1" class="step-view hidden space-y-5">
+                <div class="space-y-1">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs text-pink-400 uppercase tracking-wider font-semibold">Paso 1 // Cena</span>
+                    </div>
+                    <h2 class="text-xl sm:text-2xl font-bold text-white">¿Qué vamos a cenar/comer?</h2>
+                    <p class="text-xs sm:text-sm text-gray-400">Selecciona tu opción favorita:</p>
+                </div>
+
+                <div class="space-y-3">
+                    <!-- Option A -->
+                    <div onclick="selectMainCourse('A', 'Vamos al restaurante')" id="course-A" class="option-card rounded-2xl p-4 cursor-pointer select-none">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="space-y-1.5">
+                                <h3 class="font-semibold text-sm sm:text-base text-white">1. Restaurante coqueto de comida italiana y española</h3>
+                                <p class="text-xs text-gray-400">Esta en tepo pero aqui esta el link: <a href="https://maps.app.goo.gl/secFYLnaTTCiA9QC8">Link</a> .</p>
+                            </div>
+                            <div class="w-5 h-5 rounded-full border border-white/20 flex items-center justify-center shrink-0 mt-1 check-indicator">
+                                <div class="w-2.5 h-2.5 rounded-full bg-pink-400 opacity-0 transition-opacity"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Option B -->
+                    <div onclick="selectMainCourse('B', 'Unas hamburguestias ')" id="course-B" class="option-card rounded-2xl p-4 cursor-pointer select-none">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="space-y-1.5">
+                                <h3 class="font-semibold text-sm sm:text-base text-white">2. Hamburguesitass</h3>
+                                <p class="text-xs text-gray-400">Igual esta se puede catafixiar si tienes otra idea.</p>
+                            </div>
+                            <div class="w-5 h-5 rounded-full border border-white/20 flex items-center justify-center shrink-0 mt-1 check-indicator">
+                                <div class="w-2.5 h-2.5 rounded-full bg-pink-400 opacity-0 transition-opacity"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Option C -->
+                    <div onclick="selectMainCourse('C', 'Me cocinas tu (Aunque ya se que no es tu mejor habilidad jaja)')" id="course-C" class="option-card rounded-2xl p-4 cursor-pointer select-none">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="space-y-1.5">
+                                <h3 class="font-semibold text-sm sm:text-base text-white">3. Te cocino yo</h3>
+                                <p class="text-xs text-purple-400 font-medium">Nota mental: No es de mis mejores habilidades, honestamente mejor opta por las primeras 2 jaja 😅</p>
+                            </div>
+                            <div class="w-5 h-5 rounded-full border border-white/20 flex items-center justify-center shrink-0 mt-1 check-indicator">
+                                <div class="w-2.5 h-2.5 rounded-full bg-pink-400 opacity-0 transition-opacity"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <p id="error-step-1" class="hidden text-xs text-rose-400 bg-rose-500/10 border border-rose-500/20 rounded-xl px-3 py-2">
+                    Elige una opción antes de continuar.
+                </p>
+
+                <div class="flex items-center justify-between gap-3 pt-2">
+                    <button onclick="goToStep(0)" class="py-3.5 px-5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 text-xs sm:text-sm transition">
+                        &lt;- Atrás
+                    </button>
+                    <button onclick="validateAndNext(1)" class="flex-1 py-3.5 px-6 rounded-xl bg-pink-500 hover:bg-pink-400 text-white font-semibold text-xs sm:text-sm transition flex items-center justify-center gap-2 shadow-lg shadow-pink-500/15">
+                        <span>Siguiente</span>
+                        <span>-&gt;</span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- STEP 2: ACCIONES -->
+            <section id="step-2" class="step-view hidden space-y-5">
+                <div class="space-y-1">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs text-blue-400 uppercase tracking-wider font-semibold">Paso 2 // Acciones</span>
+                    </div>
+                    <h2 class="text-xl sm:text-2xl font-bold text-white">¿Qué quieres hacer?</h2>
+                    <p class="text-xs sm:text-sm text-gray-400">Ya dijimos que el buddy pero para centrarnos en uno, cual te late mas?:</p>
+                </div>
+
+                <div class="space-y-3">
+                    <div onclick="selectAction('A', 'Armar el buddy')" id="action-A" class="option-card rounded-2xl p-4 cursor-pointer select-none">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="space-y-1.5">
+                                <h3 class="font-semibold text-sm sm:text-base text-white">Armar el buddy</h3>
+                            </div>
+                            <div class="w-5 h-5 rounded-full border border-white/20 flex items-center justify-center shrink-0 mt-1 check-indicator">
+                                <div class="w-2.5 h-2.5 rounded-full bg-pink-400 opacity-0 transition-opacity"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div onclick="selectAction('B', 'Ir a Miniso')" id="action-B" class="option-card rounded-2xl p-4 cursor-pointer select-none">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="space-y-1.5">
+                                <h3 class="font-semibold text-sm sm:text-base text-white">Vamos a una plaza y pasamos a MiniSo</h3>
+                            </div>
+                            <div class="w-5 h-5 rounded-full border border-white/20 flex items-center justify-center shrink-0 mt-1 check-indicator">
+                                <div class="w-2.5 h-2.5 rounded-full bg-pink-400 opacity-0 transition-opacity"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div onclick="selectAction('C', 'Jugar videojuegos')" id="action-C" class="option-card rounded-2xl p-4 cursor-pointer select-none">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="space-y-1.5">
+                                <h3 class="font-semibold text-sm sm:text-base text-white">Jugamos este juego: <a href="https://www.youtube.com/watch?v=gfYW8BLNW28">"Ver video"</a></h3>
+                            </div>
+                            <div class="w-5 h-5 rounded-full border border-white/20 flex items-center justify-center shrink-0 mt-1 check-indicator">
+                                <div class="w-2.5 h-2.5 rounded-full bg-pink-400 opacity-0 transition-opacity"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <p id="error-step-2" class="hidden text-xs text-rose-400 bg-rose-500/10 border border-rose-500/20 rounded-xl px-3 py-2">
+                    No haz elegidoooo
+                </p>
+
+                <div class="flex items-center justify-between gap-3 pt-2">
+                    <button onclick="goToStep(1)" class="py-3.5 px-5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 text-xs sm:text-sm transition">
+                        &lt;- Atrás
+                    </button>
+                    <button onclick="validateAndNext(2)" class="flex-1 py-3.5 px-6 rounded-xl bg-pink-500 hover:bg-pink-400 text-white font-semibold text-xs sm:text-sm transition flex items-center justify-center gap-2 shadow-lg shadow-pink-500/15">
+                        <span>Siguiente</span>
+                        <span>-&gt;</span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- STEP 3: POSTRE -->
+            <section id="step-3" class="step-view hidden space-y-5">
+                <div class="space-y-1">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs text-purple-400 uppercase tracking-wider font-semibold">Paso 3 // Dulce</span>
+                    </div>
+                    <h2 class="text-xl sm:text-2xl font-bold text-white">POSTREE</h2>
+                    <p class="text-xs sm:text-sm text-gray-400">¿Qué se te antoja de postre? (Puedes elegir varios)</p>
+                </div>
+
+<!-- Tags -->
+                <div class="space-y-2.5">
+                    <div class="flex flex-wrap gap-2" id="dessert-tags-container">
+                        <button type="button" onclick="toggleTag('Pansito y un Cafe 🥐', this)" class="qa-pill px-3.5 py-2 rounded-xl text-xs text-gray-300">🥐 Pansito</button>
+                        <button type="button" onclick="toggleTag('Crepas 🥞', this)" class="qa-pill px-3.5 py-2 rounded-xl text-xs text-gray-300">🥞 Crepas</button>
+                        <button type="button" onclick="toggleTag('Helado 🍦', this)" class="qa-pill px-3.5 py-2 rounded-xl text-xs text-gray-300">🍦 Helado</button>
+                        <button type="button" onclick="toggleTag('Sorpréndeme ✨', this)" class="qa-pill px-3.5 py-2 rounded-xl text-xs text-gray-300">✨ Sorpréndeme</button>
+                    </div>
+                </div>
+
+                <div class="space-y-2 pt-1">
+                    <label class="block text-xs text-gray-300">
+                        ¿Se te antoja otra cosa?
+                    </label>
+                    <textarea id="dessert-custom-input" rows="2" placeholder="Ej. Unas papas o botana, para mientras construimos jajaja" class="w-full rounded-2xl bg-black/40 border border-white/10 focus:border-pink-500 focus:outline-none p-3.5 text-sm text-white placeholder-gray-500 transition"></textarea>
+                </div>
+
+                <div class="flex items-center justify-between gap-3 pt-2">
+                    <button onclick="goToStep(2)" class="py-3.5 px-5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 text-xs sm:text-sm transition">
+                        &lt;- Atrás
+                    </button>
+                    <button onclick="goToStep(4)" class="flex-1 py-3.5 px-6 rounded-xl bg-pink-500 hover:bg-pink-400 text-white font-semibold text-xs sm:text-sm transition flex items-center justify-center gap-2 shadow-lg shadow-pink-500/15">
+                        <span>Ya casi...</span>
+                        <span>-&gt;</span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- STEP 4: WHATSAPP (CONFIRMACIÓN) -->
+            <section id="step-4" class="step-view hidden space-y-5">
+                <div class="text-center space-y-3">
+                    <div class="w-16 h-16 mx-auto bg-gradient-to-r from-pink-500 to-purple-500 rounded-full flex items-center justify-center text-2xl shadow-lg shadow-pink-500/30">
+                        ✅
+                    </div>
+                    <h2 class="text-2xl font-bold text-white">¡Todo Listo!</h2>
+                    <p class="text-sm text-gray-300">
+                       Increíble elección, mandamela por whatss para quedar. Agradezco su atención.
+                    </p>
+                </div>
+
+                <div class="pt-4">
+                    <button onclick="sendToWhatsApp()" class="w-full py-4 px-5 rounded-2xl bg-gradient-to-r from-pink-500 to-blue-500 hover:opacity-90 active:scale-[0.99] text-white font-bold text-sm sm:text-base shadow-xl shadow-pink-500/25 transition flex items-center justify-center gap-2.5">
+                        <!-- Icono de WhatsApp genérico -->
+                        <svg class="w-5 h-5 shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.274.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.1.824z" />
+                        </svg>
+                        <span>Enviar Confirmación por Whats</span>
+                    </button>
+                    
+                    <button onclick="goToStep(3)" class="w-full mt-3 py-2.5 rounded-xl bg-transparent hover:bg-white/5 text-gray-400 hover:text-gray-200 text-xs transition">
+                        ↺ Espera, quiero cambiar algo
+                    </button>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <script>
+        /**************************************************************
+         * APPLICATION STATE
+         **************************************************************/
+        const state = {
+            currentStep: 0,
+            food: null,
+            action: null,
+            desserts: [],
+            dessertNote: ''
+        };
+
+        const phaseLabels = ['Inicio', 'Paso 1: Cena', 'Paso 2: Plan', 'Paso 3: Postre', '¡Completado!'];
+
+        function goToStep(stepIndex) {
+            for (let i = 0; i <= 4; i++) {
+                const el = document.getElementById(`step-${i}`);
+                if (el) el.classList.add('hidden');
+            }
+            const target = document.getElementById(`step-${stepIndex}`);
+            if (target) target.classList.remove('hidden');
+
+            state.currentStep = stepIndex;
+
+            // Update Progress
+            document.getElementById('step-counter-label').textContent = phaseLabels[stepIndex];
+            const widths = ['10%', '33%', '66%', '90%', '100%'];
+            document.getElementById('progress-bar').style.width = widths[stepIndex];
+
+            if (window.boost3DRotation) window.boost3DRotation();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function selectMainCourse(code, title) {
+            state.food = title;
+            document.getElementById('error-step-1').classList.add('hidden');
+
+            ['A', 'B', 'C'].forEach(opt => {
+                const card = document.getElementById(`course-${opt}`);
+                const dot = card.querySelector('.check-indicator div');
+                if (opt === code) {
+                    card.classList.add('selected');
+                    dot.classList.remove('opacity-0');
+                } else {
+                    card.classList.remove('selected');
+                    dot.classList.add('opacity-0');
+                }
+            });
+        }
+
+        function selectAction(code, title) {
+            state.action = title;
+            document.getElementById('error-step-2').classList.add('hidden');
+
+            ['A', 'B', 'C'].forEach(opt => {
+                const card = document.getElementById(`action-${opt}`);
+                const dot = card.querySelector('.check-indicator div');
+                if (opt === code) {
+                    card.classList.add('selected');
+                    dot.classList.remove('opacity-0');
+                } else {
+                    card.classList.remove('selected');
+                    dot.classList.add('opacity-0');
+                }
+            });
+        }
+
+        function validateAndNext(step) {
+            if (step === 1) {
+                if (!state.food) {
+                    document.getElementById('error-step-1').classList.remove('hidden');
+                    return;
+                }
+                goToStep(2);
+            } else if (step === 2) {
+                if (!state.action) {
+                    document.getElementById('error-step-2').classList.remove('hidden');
+                    return;
+                }
+                goToStep(3);
+            }
+        }
+
+        function toggleTag(tagName, btnEl) {
+            if (state.desserts.includes(tagName)) {
+                state.desserts = state.desserts.filter(t => t !== tagName);
+                btnEl.classList.remove('active');
+            } else {
+                state.desserts.push(tagName);
+                btnEl.classList.add('active');
+            }
+        }
+
+function sendToWhatsApp() {
+            state.dessertNote = document.getElementById('dessert-custom-input').value.trim();
+
+            if (typeof confetti === 'function') {
+                confetti({
+                    particleCount: 100,
+                    spread: 70,
+                    origin: { y: 0.6 },
+                    colors: ['#ec4899', '#3b82f6', '#a855f7']
+                });
+            }
+
+            let postresTexto = state.desserts.length > 0 ? state.desserts.join(', ') : 'Ninguno en específico';
+            if (state.dessertNote) {
+                postresTexto += ` (Y también: ${state.dessertNote})`;
+            }
+
+            const message = `Holisss! Ya elegí mi plan para mañana:\n\n` +
+                `🍝 *Para cenar:* ${state.food}\n` +
+                `🎮 *De actividad:* ${state.action}\n` +
+                `🍰 *Postre:* ${postresTexto}\n\n` +
+                `¡Nos vemos mañana! `;
+
+            const phoneNumber = '525526771907';
+            const whatsappUrl = `https://api.whatsapp.com/send?phone=${phoneNumber}&text=${encodeURIComponent(message)}`;
+            
+            setTimeout(() => {
+                window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+            }, 800);
+        }
+
+        /**************************************************************
+         * THREE.JS BACKGROUND
+         **************************************************************/
+        window.onload = function () {
+            const canvas = document.getElementById('bg-canvas');
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 5.5;
+
+            const renderer = new THREE.WebGLRenderer({
+                canvas: canvas, alpha: true, antialias: true, powerPreference: 'high-performance'
+            });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+            const group = new THREE.Group();
+            scene.add(group);
+
+            // Pink Icosahedron
+            const icoGeo = new THREE.IcosahedronGeometry(2.1, 1);
+            const icoMat = new THREE.MeshBasicMaterial({ color: 0xec4899, wireframe: true, transparent: true, opacity: 0.15 });
+            const icosahedron = new THREE.Mesh(icoGeo, icoMat);
+            group.add(icosahedron);
+
+            // Blue Torus Knot
+            const knotGeo = new THREE.TorusKnotGeometry(0.95, 0.24, 64, 8);
+            const knotMat = new THREE.MeshBasicMaterial({ color: 0x3b82f6, wireframe: true, transparent: true, opacity: 0.12 });
+            const torusKnot = new THREE.Mesh(knotGeo, knotMat);
+            group.add(torusKnot);
+
+            // Purple Particles
+            const particleCount = 120;
+            const positions = new Float32Array(particleCount * 3);
+            for (let i = 0; i < particleCount * 3; i++) {
+                positions[i] = (Math.random() - 0.5) * 14;
+            }
+            const particlesGeo = new THREE.BufferGeometry();
+            particlesGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            const particlesMat = new THREE.PointsMaterial({ color: 0xa855f7, size: 0.035, transparent: true, opacity: 0.45 });
+            const particleSystem = new THREE.Points(particlesGeo, particlesMat);
+            scene.add(particleSystem);
+
+            let targetX = 0, targetY = 0, boostSpeed = 0;
+            window.boost3DRotation = function () { boostSpeed = 0.06; };
+
+            function onPointerMove(clientX, clientY) {
+                targetX = (clientX / window.innerWidth - 0.5) * 0.9;
+                targetY = (clientY / window.innerHeight - 0.5) * 0.9;
+            }
+
+            window.addEventListener('mousemove', (e) => onPointerMove(e.clientX, e.clientY), { passive: true });
+            window.addEventListener('touchmove', (e) => {
+                if (e.touches.length > 0) onPointerMove(e.touches[0].clientX, e.touches[0].clientY);
+            }, { passive: true });
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+
+            function animate() {
+                requestAnimationFrame(animate);
+                boostSpeed *= 0.94;
+                icosahedron.rotation.y += 0.0025 + boostSpeed;
+                icosahedron.rotation.x += 0.0015 + boostSpeed * 0.5;
+                torusKnot.rotation.y -= 0.004 + boostSpeed;
+                torusKnot.rotation.z += 0.002;
+                group.rotation.y += (targetX - group.rotation.y) * 0.05;
+                group.rotation.x += (targetY - group.rotation.x) * 0.05;
+                particleSystem.rotation.y += 0.0008;
+                renderer.render(scene, camera);
+            }
+            animate();
+        };
+    </script>
+</body>
+</html>
